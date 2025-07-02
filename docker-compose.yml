@@ -1,0 +1,13 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  analizador:
+    build: .
+    container_name: analizador-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./analisis.db:/app/analisis.db
+    command: uvicorn analizador_prex_api:app --host 0.0.0.0 --port 8000
+
