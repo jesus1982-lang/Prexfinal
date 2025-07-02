@@ -1,113 +1,123 @@
- Analizador de Sitios Web – Desafío de Ciberseguridad Prex
+# Analizador de URLs con FastAPI, SQLite y Docker
 
-Este programa fue desarrollado como parte del proceso de selección para un puesto en el área de Ciberseguridad de Prex. Su objetivo es realizar un análisis básico de una URL dada, brindando información clave sobre su accesibilidad, seguridad y posibles redirecciones.
-
----
-
- ¿Qué hace el programa?
-
-Al ejecutar el script, se solicita al usuario ingresar una URL. A partir de esa entrada, el programa realiza los siguientes pasos:
-
-1. *Verifica si el sitio está accesible*
-
-   * Realiza una solicitud HTTP y muestra el código de estado (200, 301, etc.).
-   * Informa si el sitio redirige a otro dominio.
-
-2. *Obtiene la dirección IP del dominio*
-
-   * Resuelve el nombre DNS y muestra la IP pública asociada.
-
-3. *Analiza los encabezados HTTP*
-
-   * Muestra los headers recibidos del servidor.
-
-4. *Inspecciona el certificado SSL (si corresponde)*
-
-   * Si el sitio usa HTTPS, se conecta por SSL y extrae:
-
-     * Emisor del certificado
-     * Sujeto del certificado
-     * Fecha de inicio y vencimiento
-
-5. *Guarda todo el resultado en un archivo JSON*
-
-   * El archivo resultado_analisis.json contiene el informe completo.
-
-6. *Guarda los datos en una base SQLite local*
-
-   * El archivo analisis.db contiene las tablas necesarias en forma normalizada para registrar los análisis realizados.
-   * Las tablas se crean automáticamente si no existen.
-   * Cada ejecución del script inserta un nuevo análisis.
+Este proyecto implementa una API REST para analizar URLs, guardar sus resultados en una base de datos SQLite y consultarlos luego desde una interfaz web. Es ideal para testear seguridad, certificados, headers y redirecciones de cualquier sitio. Fue desarrollado para ser desplegado en contenedores Docker y operado desde Portainer.
 
 ---
 
- ¿Por qué es útil esto en ciberseguridad?
+## Características principales
 
-Este análisis inicial permite validar:
+* Análisis de cualquier URL (HTTP/HTTPS):
 
-* Si un sitio es legítimo y está online
-* Qué tecnología de seguridad utiliza (certificados, redirecciones, headers)
-* Si el certificado es válido o expiró
-* Si está protegido por HTTPS y qué entidad lo emite
-
-Todo esto forma parte de los *controles básicos de higiene digital* al evaluar activos, endpoints o dominios externos.
-
----
- Requisitos técnicos
-
-* Python 3.8+
-* Librería requests, sqlite3 (incluida por defecto)
-* Acceso a internet
-* Compatible con Windows, Linux o MacOS
+  * Obtención de IP
+  * Código de estado (status code)
+  * Redirecciones
+  * Headers HTTP
+  * Certificado SSL (validez, sujeto, emisor)
+* Persistencia en SQLite mediante SQLAlchemy.
+* API REST construida con **FastAPI**.
+* UI interactiva via **Swagger** en `/docs`.
+* Consulta y administración de datos desde interfaz web (sqlite-web).
+* Totalmente dockerizado y funcional desde Portainer.
 
 ---
 
- ¿Cómo se usa?
+## Endpoints disponibles
 
-1. Asegurate de tener Python y pip instalados
-2. (Opcional) Crear un entorno virtual:
+* `POST /analizar`
 
-   bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate     # Windows
-   
-3. Instalar dependencias:
+  * Cuerpo JSON:
 
-   bash
-   pip install -r requirements.txt
-   
-4. Ejecutar el script:
-
-   bash
-   python analizador_prex.py
-   
-5. Ingresar la URL a analizar cuando se solicite
-6. Ver los resultados en pantalla, en el archivo generado y en la base de datos local
+    ```json
+    {
+      "url": "https://www.google.com"
+    }
+    ```
+  * Resultado: guarda los datos del análisis en la base y devuelve un mensaje confirmando la operación.
 
 ---
 
- Archivos generados
+## Modelo de datos
 
-* resultado_analisis.json: contiene toda la información del análisis en formato estructurado
-* analisis.db: base de datos SQLite con los datos persistidos en forma normalizada
+El modelo sigue una estructura relacional normalizada. Ver imagen `ERD.png` incluida:
 
----
-
- Extensiones posibles
-
-Este script puede evolucionar para incluir:
-
-* Verificación de políticas HTTP (HSTS, CSP, CAA)
-* Escaneo de puertos (superficial)
-* Revisión de reputación del dominio en listas negras
-* Análisis de DNS (MX, TXT, SPF, etc.)
-* Integración con herramientas como VirusTotal, Shodan o Censys
-* Soporte dual: SQLite local + PostgreSQL en producción
+* `sitios`: tabla principal con los resultados generales del análisis.
+* `headers`: headers HTTP asociados a cada sitio.
+* `certificados`: información del certificado SSL.
+* `cert_sujetos`: sujeto del certificado.
+* `cert_emisores`: emisor del certificado.
 
 ---
 
-  Autores
+## Requisitos locales (solo para desarrollo)
 
-Desarrollado por Jesus Mercado para acompañar a un perfil técnico de infraestructura en su aplicación al rol de Ciberseguridad en Prex.
+* Python >= 3.10
+* SQLite3
 
+Instalación:
+
+```bash
+pip install -r requirements.txt
+```
+
+Ejecución:
+
+```bash
+uvicorn analizador_prex_api:app --reload
+```
+
+---
+
+## Despliegue en Docker / Portainer
+
+### Docker Compose (recomendado)
+
+```yaml
+version: '3.8'
+
+services:
+  analizador-api:
+    image: jmercadot/analizador-api:latest
+    container_name: analizador-api
+    ports:
+      - "5000:8000"
+    volumes:
+      - analisis_sqlite:/data
+      - analisis_sqlite:/app
+    command: uvicorn analizador_prex_api:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  sqliteweb:
+    image: coleifer/sqlite-web
+    container_name: sqlite-web
+    ports:
+      - "8080:8080"
+    volumes:
+      - analisis_sqlite:/data
+    restart: unless-stopped
+
+volumes:
+  analisis_sqlite:
+```
+
+### Accesos recomendados
+
+* API Swagger UI: `http://<IP>:5000/docs`
+* Interfaz SQLite Web: `http://<IP>:8080`
+
+---
+
+## Extras
+
+* Compatible con despliegue en AWS EC2.
+* Acceso externo controlado por Security Groups y firewall.
+* Imágenes alojadas en DockerHub:
+
+  * `jmercadot/analizador-api`
+  * `coleifer/sqlite-web`
+
+---
+
+## Autor
+
+* Proyecto desarrollado por **Jesús Mercado** para Prex.
+* Soporte, documentación y despliegue Docker por Jesus Mercado
