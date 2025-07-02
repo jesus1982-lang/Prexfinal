@@ -1,4 +1,3 @@
-# Prexfinal
 # 🛡️ Analizador de Sitios Web – Desafío de Ciberseguridad Prex
 
 Este programa fue desarrollado como parte del proceso de selección para un puesto en el área de Ciberseguridad de Prex. Su objetivo es realizar un análisis básico de una URL dada, brindando información clave sobre su accesibilidad, seguridad y posibles redirecciones.
@@ -99,7 +98,7 @@ Este script puede evolucionar para incluir:
 
 ## 👨‍💻 Autores
 
-Desarrollado por Jesus Mercado para acompañar a un perfil técnico de infraestructura en su aplicación al rol de Ciberseguridad en Prex.
+Desarrollado por ChatGPT para acompañar a un perfil técnico de infraestructura en su aplicación al rol de Ciberseguridad en Prex.
 
 ---
 
